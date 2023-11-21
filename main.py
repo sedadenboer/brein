@@ -1,4 +1,5 @@
 import vtk
+from vtkmodules.vtkFiltersSources import vtkSphereSource  
 
 
 SIMULATION = ['no-network', 'disable', 'stimulus', 'calcium']
@@ -90,62 +91,119 @@ def connection_reader(sim_type: str, step: int) -> dict:
         # Return the connection dictionary
         return connection_dict
 
+def create_polydata(points, connections):
+    """Create a vtkPolyData object with points and connections.
 
-def plot_3d(points: vtk.vtkPoints, connections: dict) -> None:
+    Args:
+        points (vtk.vtkPoints): position points
+        connections (dict): connection dictionary
+
+    Returns:
+        vtk.vtkPolyData: vtkPolyData object
+    """
+    polydata = vtk.vtkPolyData()
+    polydata.SetPoints(points)
+
+    lines = vtk.vtkCellArray()
+    for point_id, connected_points in connections.items():
+        for connected_point_id in connected_points:
+            line = vtk.vtkLine()
+            line.GetPointIds().SetId(0, point_id)
+            line.GetPointIds().SetId(1, connected_point_id)
+            lines.InsertNextCell(line)
+
+    polydata.SetLines(lines)
+    return polydata
+
+
+def create_glyph_filter(polydata):
+    """Create a glyph filter to show individual points.
+
+    Args:
+        polydata (vtk.vtkPolyData): vtkPolyData object
+
+    Returns:
+        vtk.vtkGlyph3D: glyph filter
+    """
+    sphere_source = vtkSphereSource()
+
+    glyph_filter = vtk.vtkGlyph3D()
+    glyph_filter.SetInputData(polydata)
+    glyph_filter.SetSourceConnection(sphere_source.GetOutputPort())
+    glyph_filter.SetScaleModeToScaleByScalar()
+    glyph_filter.SetScaleFactor(3)
+
+    return glyph_filter
+
+
+def create_tube_filter(polydata):
+    """Create a tube filter to create tubes around the connections.
+
+    Args:
+        polydata (vtk.vtkPolyData): vtkPolyData object
+
+    Returns:
+        vtk.vtkTubeFilter: tube filter
+    """
+    tube_filter = vtk.vtkTubeFilter()
+    tube_filter.SetInputData(polydata)
+    tube_filter.SetRadius(1)
+
+    return tube_filter
+
+
+def create_renderer(polydata, glyph_filter, tube_filter):
+    """Create a renderer with actors for tubes and points.
+
+    Args:
+        polydata (vtk.vtkPolyData): vtkPolyData object
+        glyph_filter (vtk.vtkGlyph3D): glyph filter
+        tube_filter (vtk.vtkTubeFilter): tube filter
+
+    Returns:
+        vtk.vtkRenderer: renderer
+    """
+    tube_mapper = vtk.vtkPolyDataMapper()
+    tube_mapper.SetInputConnection(tube_filter.GetOutputPort())
+
+    tube_actor = vtk.vtkActor()
+    tube_actor.SetMapper(tube_mapper)
+    tube_actor.GetProperty().SetColor(1, 1, 1)
+
+    point_mapper = vtk.vtkPolyDataMapper()
+    point_mapper.SetInputConnection(glyph_filter.GetOutputPort())
+
+    point_actor = vtk.vtkActor()
+    point_actor.SetMapper(point_mapper)
+    point_actor.GetProperty().SetColor(0, 0, 1)
+
+    renderer = vtk.vtkRenderer()
+    renderer.AddActor(tube_actor)
+    renderer.AddActor(point_actor)
+
+    return renderer
+
+
+def plot_3d(points, connections):
     """Plot the points and connections in 3D.
 
     Args:
         points (vtk.vtkPoints): position points
         connections (dict): connection dictionary
     """
-    # Create a vtkPolyData object
-    polydata = vtk.vtkPolyData()
+    polydata = create_polydata(points, connections)
+    glyph_filter = create_glyph_filter(polydata)
+    tube_filter = create_tube_filter(polydata)
+    renderer = create_renderer(polydata, glyph_filter, tube_filter)
 
-    # Set the points in the vtkPolyData object
-    polydata.SetPoints(points)
-
-    # Create a vtkCellArray object to store the connections
-    cell_array = vtk.vtkCellArray()
-
-    # Iterate over the connections
-    for key, values in connections.items():
-        # Create a vtkIdList object to store the connection indices
-        id_list = vtk.vtkIdList()
-
-        # Add the connection indices to the vtkIdList
-        for value in values:
-            id_list.InsertNextId(value)
-
-        # Add the vtkIdList to the vtkCellArray
-        cell_array.InsertNextCell(id_list)
-
-    # Set the connections in the vtkPolyData object
-    polydata.SetLines(cell_array)
-
-    # Create a vtkPolyDataMapper object
-    mapper = vtk.vtkPolyDataMapper()
-    mapper.SetInputData(polydata)
-
-    # Create a vtkActor object
-    actor = vtk.vtkActor()
-    actor.SetMapper(mapper)
-
-    # Create a vtkRenderer object
-    renderer = vtk.vtkRenderer()
-    renderer.AddActor(actor)
-
-    # Create a vtkRenderWindow object
     render_window = vtk.vtkRenderWindow()
     render_window.AddRenderer(renderer)
 
-    # Create a vtkRenderWindowInteractor object
-    interactor = vtk.vtkRenderWindowInteractor()
-    interactor.SetRenderWindow(render_window)
+    render_window_interactor = vtk.vtkRenderWindowInteractor()
+    render_window_interactor.SetRenderWindow(render_window)
 
-    # Initialize the interactor and start the rendering loop
-    interactor.Initialize()
     render_window.Render()
-    interactor.Start()
+    render_window_interactor.Start()
 
 
 def main():
