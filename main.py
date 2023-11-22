@@ -152,7 +152,7 @@ def create_tube_filter(polydata):
     return tube_filter
 
 
-def create_renderer(polydata, glyph_filter, tube_filter):
+def create_renderer(glyph_filter, tube_filter):
     """Create a renderer with actors for tubes and points.
 
     Args:
@@ -194,7 +194,7 @@ def plot_3d(points, connections):
     polydata = create_polydata(points, connections)
     glyph_filter = create_glyph_filter(polydata)
     tube_filter = create_tube_filter(polydata)
-    renderer = create_renderer(polydata, glyph_filter, tube_filter)
+    renderer = create_renderer(glyph_filter, tube_filter)
 
     render_window = vtk.vtkRenderWindow()
     render_window.AddRenderer(renderer)
