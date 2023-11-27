@@ -94,7 +94,7 @@ def get_areas() -> vtk.vtkIntArray:
 def get_calcium_list(step: int) -> list:
     pass
 
-def get_connections_dict(step: int) -> dict:
+def get_connections_dict(step: int = 0) -> dict:
     """Read the connection file.
 
     Args:
@@ -138,7 +138,7 @@ def get_connections_dict(step: int) -> dict:
     
     return connections_dict
 
-def get_connections(step: int) -> vtk.vtkCellArray:
+def get_connections(step: int = 0) -> vtk.vtkCellArray:
     """Get the connections.
 
     Args:
@@ -345,7 +345,7 @@ def plot(positions: vtk.vtkPoints,
 def main():
     # Choose the simulation type
     global simulation_type
-    simulation_type = 'no_network' # no_network, disable
+    simulation_type = 'no-network' # no_network, disable
     
     # Get the positions and connections
     positions = get_positions()
