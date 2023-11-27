@@ -1,17 +1,16 @@
+import numpy as np
+import pandas as pd
 import vtk
+import argparse
 
-
-def get_positions(sim_type: str) -> vtk.vtkPoints:
+def get_positions() -> vtk.vtkPoints:
     """Read the position file.
-
-    Args:
-        sim_type (str): simulation type
 
     Returns:
         vtk.vtkPoints: position points
     """
     # Get the position file location
-    position_file_loc = f'data/viz-{sim_type}/positions/rank_0_positions.txt'
+    position_file_loc = f'data/viz-{simulation_type}/positions/rank_0_positions.txt'
 
     # Create an empty vtkPoints object
     points = vtk.vtkPoints()
@@ -39,18 +38,73 @@ def get_positions(sim_type: str) -> vtk.vtkPoints:
         # Print the vtkPoints object
     return points
 
-def get_connections_dict(sim_type: str, step: int) -> dict:
+def get_areas_list() -> list:
+    """Read the area file.
+    
+    Returns:
+        list: area list
+    """
+    # Get the area file location
+    area_file_loc = f'data/viz-{simulation_type}/positions/rank_0_positions.txt'
+
+    # Open the area file
+    with open(area_file_loc, 'r') as area_file:
+        # Read the lines of the file
+        lines = area_file.readlines()
+        
+        # Create an empty list
+        areas = []
+        
+        # Iterate over the lines
+        for line in lines:
+            # Skip lines starting with #
+            if line.startswith('#'):
+                continue
+            
+            # Split the line into fields
+            fields = line.strip().split()
+            
+            # Extract the area
+            area = int(fields[4].split('_')[1])
+            
+            # Add the area to the list
+            areas.append(area)
+        
+    # Return the area list
+    return areas
+
+def get_areas() -> vtk.vtkIntArray:
+    """Get the brain areas.
+
+    Returns:
+        vtk.vtkIntArray: brain areas
+    """
+    # Create an empty vtkIntArray object for the brain areas
+    areas_array = vtk.vtkIntArray()
+    areas_array.SetNumberOfComponents(1)
+    areas_array.SetName('Areas')
+
+    # Get the brain areas list and add values to the vtkIntArray object
+    areas = get_areas_list()
+    for area in areas:
+        areas_array.InsertNextValue(area)
+
+    return areas_array
+
+def get_calcium_list(step: int) -> list:
+    pass
+
+def get_connections_dict(step: int) -> dict:
     """Read the connection file.
 
     Args:
-        sim_type (str): simulation type
         step (int): simulation step
 
     Returns:
         dict: connection dictionary
     """
     # Get the connection file location
-    connection_infile_loc = f'data/viz-{sim_type}/network/rank_0_step_{step}_in_network.txt'
+    connection_infile_loc = f'data/rank_0_step_1000000_out_no_network.txt'
 
     # Create an empty dictionary
     connections_dict = {}
@@ -84,18 +138,17 @@ def get_connections_dict(sim_type: str, step: int) -> dict:
     
     return connections_dict
 
-def get_connections(sim_type: str, step: int) -> vtk.vtkCellArray:
+def get_connections(step: int) -> vtk.vtkCellArray:
     """Get the connections.
 
     Args:
-        sim_type (str): simulation type
         step (int): simulation step
 
     Returns:
         vtk.vtkCellArray: connections
     """
     # Get the connections dictionary
-    connections_dict = get_connections_dict(sim_type, step)
+    connections_dict = get_connections_dict(step)
 
     # Create an empty vtkCellArray object to store the connections
     connections = vtk.vtkCellArray()
@@ -116,9 +169,10 @@ def get_connections(sim_type: str, step: int) -> vtk.vtkCellArray:
             
     return connections
 
-def create_polydata(points: vtk.vtkPoints, connections: vtk.vtkCellArray) -> (
-        vtk.vtkPolyData, vtk.vtkPolyData
-        ):
+def create_polydata(points: vtk.vtkPoints,
+                    connections: vtk.vtkCellArray,
+                    area_mapping: bool,
+                    calcium_mapping: bool) -> (vtk.vtkPolyData, vtk.vtkPolyData):
     """Create polydata for points and connections.
 
     Args:
@@ -137,6 +191,13 @@ def create_polydata(points: vtk.vtkPoints, connections: vtk.vtkCellArray) -> (
     points_polydata.SetPoints(points)
     lines_polydata.SetPoints(points)
     
+    #
+    if area_mapping:
+        areas = get_areas()
+        points_polydata.GetPointData().SetScalars(areas)
+    elif calcium_mapping:
+        pass
+
     # Set the lines for the connections vtkPolyData object
     lines_polydata.SetLines(connections)
 
@@ -152,33 +213,41 @@ def create_glyph_filter(polydata: vtk.vtkPolyData) -> vtk.vtkGlyph3D:
         vtk.vtkGlyph3D: glyph filter
     """
     # Create a sphere source and a glyph filter to represent and display the points
-    sphere_source = vtk.vtkSphereSource()
-    glyph_filter = vtk.vtkGlyph3D()
-
-    # Set the input data for the glyph filter
+    glyph_filter = vtk.vtkVertexGlyphFilter()
     glyph_filter.SetInputData(polydata)
-    glyph_filter.SetSourceConnection(sphere_source.GetOutputPort())
-    glyph_filter.SetScaleFactor(5)
+    glyph_filter.Update()
 
     return glyph_filter
 
-def create_point_actor(glyph_filter: vtk.vtkGlyph3D) -> vtk.vtkActor:
+def create_point_actor(glyph_filter: vtk.vtkGlyph3D, area_mapping: bool, calcium_mapping: bool) -> vtk.vtkActor:
     """Create an actor for the points.
 
     Args:
         glyph_filter (vtk.vtkGlyph3D): glyph filter
-    
+        area_mapping (bool): display neuron color based on area
+
     Returns:
         vtk.vtkActor: point actor
     """
-    # Create a mapper and an actor for the points
+    # Create a mapper 
     point_mapper = vtk.vtkPolyDataMapper()
     point_mapper.SetInputConnection(glyph_filter.GetOutputPort())
-    point_actor = vtk.vtkActor()
-    point_actor.SetMapper(point_mapper)
 
     # Appearance settings for the points
-    point_actor.GetProperty().SetColor(0.8, 0.2, 0.2)
+    if area_mapping:
+        point_mapper.SetScalarRange(0, 47)
+    elif calcium_mapping:
+        pass
+
+    # Set the scalar/color lookup table for the points
+    point_mapper.SetLookupTable(get_lut())
+
+    # Create an actor for the points
+    point_actor = vtk.vtkActor()
+    point_actor.GetProperty().SetPointSize(10)
+    point_actor.GetProperty().SetRenderPointsAsSpheres(1)
+    point_actor.SetMapper(point_mapper)
+
     return point_actor
 
 def create_connection_actor(polydata: vtk.vtkPolyData) -> vtk.vtkActor:
@@ -203,29 +272,62 @@ def create_connection_actor(polydata: vtk.vtkPolyData) -> vtk.vtkActor:
 
     return connection_actor
 
-def plot_basic(positions: vtk.vtkPoints, connections: vtk.vtkCellArray) -> None:
+def get_lut() -> vtk.vtkLookupTable:
+    """Get the lookup table for colors.
+
+    Returns:
+        vtk.vtkLookupTable: lookup table
+    """
+    lut = vtk.vtkLookupTable()
+    lut.SetNumberOfColors(256)
+    lut.SetHueRange(0, 1)
+    lut.SetSaturationRange(1, 1)
+    lut.SetValueRange(1, 1)
+    lut.SetAlphaRange(1, 1)
+    lut.SetRampToLinear()
+    lut.Build()
+
+    return lut
+
+def plot(positions: vtk.vtkPoints,
+         connections: vtk.vtkCellArray,
+         area_mapping: bool,
+         calcium_mapping: bool
+         ) -> None:
     """Plot the points and connections.
 
     Args:
         positions (vtk.vtkPoints): position points
         connections (vtk.vtkCellArray): connections
+        area_mapping (bool): display neuron color based on area
+        calcium_mapping (bool): display neuron color based on calcium level
 
     Returns:
         None
     """
     # Create polydata for points and connections
-    points, lines = create_polydata(positions, connections)
+    points, lines = create_polydata(positions, connections, area_mapping, calcium_mapping)
     # Create a glyph filter to display all the points
     glyph_filter = create_glyph_filter(points)
 
     # Create actors for points and connections
-    point_actor = create_point_actor(glyph_filter)
+    point_actor = create_point_actor(glyph_filter, area_mapping, calcium_mapping)
     connection_actor = create_connection_actor(lines)
 
     # Create a renderer and add the actors
     renderer = vtk.vtkRenderer()
     renderer.AddActor(point_actor)
     renderer.AddActor(connection_actor)
+
+    if area_mapping:
+         # Create a scalar bar actor
+        scalar_bar = vtk.vtkScalarBarActor()
+        scalar_bar.SetLookupTable(get_lut())
+        scalar_bar.SetTitle('Areas')
+        renderer.AddActor(scalar_bar)
+    elif calcium_mapping:
+        pass
+
     renderer.ResetCamera()
 
     # Create a render window and add the renderer
@@ -242,10 +344,18 @@ def plot_basic(positions: vtk.vtkPoints, connections: vtk.vtkCellArray) -> None:
 
 def main():
     # Choose the simulation type
-    SIMULATION = ['no-network', 'disable', 'stimulus', 'calcium']
-    positions = get_positions(SIMULATION[1])
-    connections = get_connections(SIMULATION[1], 0)
-    plot_basic(positions, connections)
+    global simulation_type
+    simulation_type = 'no_network' # no_network, disable
+    
+    # Get the positions and connections
+    positions = get_positions()
+    connections = get_connections()
+
+    # Plot the points and connections according to settings
+    plot(positions=positions,
+         connections=connections,
+         area_mapping=True,
+         calcium_mapping=False)
 
 
 if __name__ == '__main__':
