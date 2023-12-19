@@ -306,6 +306,28 @@ def plot(positions: vtk.vtkPoints,
     renderer.AddActor(point_actor)
     renderer.AddActor(connection_actor)
     renderer.ResetCamera()
+    renderer.SetBackground(0.32, 0.34, 0.43)
+
+    # Add axes reference
+    axes_actor = vtk.vtkAxesActor()
+    axes_actor.SetShaftTypeToCylinder()
+    axes_actor.SetXAxisLabelText('X')
+    axes_actor.SetYAxisLabelText('Y')
+    axes_actor.SetZAxisLabelText('Z')
+    axes_actor.SetTotalLength(10, 10, 10)
+    axes_actor.SetCylinderRadius(0.02)
+    axes_actor.GetXAxisCaptionActor2D().GetTextActor().SetTextScaleModeToNone()
+    axes_actor.GetYAxisCaptionActor2D().GetTextActor().SetTextScaleModeToNone()
+    axes_actor.GetZAxisCaptionActor2D().GetTextActor().SetTextScaleModeToNone()
+    axes_actor.GetXAxisCaptionActor2D().GetCaptionTextProperty().SetVerticalJustificationToBottom()
+    renderer.AddActor(axes_actor)
+
+    # Add text to the renderer
+    text_actor = vtk.vtkTextActor()
+    text_actor.SetInput('Brain visualisation with neurons and connections')
+    text_actor.GetTextProperty().SetFontSize(24)
+    text_actor.GetTextProperty().SetColor(1, 1, 1)
+    text_actor.SetPosition(500, 900)
 
     # Create a render window and add the renderer
     render_window = vtk.vtkRenderWindow()
