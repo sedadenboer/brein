@@ -301,13 +301,6 @@ def plot(positions: vtk.vtkPoints,
     point_actor = create_point_actor(glyph_filter, area_mapping)
     connection_actor = create_connection_actor(lines)
 
-    # Create a renderer and add the actors
-    renderer = vtk.vtkRenderer()
-    renderer.AddActor(point_actor)
-    renderer.AddActor(connection_actor)
-    renderer.ResetCamera()
-    renderer.SetBackground(0.32, 0.34, 0.43)
-
     # Add axes reference
     axes_actor = vtk.vtkAxesActor()
     axes_actor.SetShaftTypeToCylinder()
@@ -320,18 +313,26 @@ def plot(positions: vtk.vtkPoints,
     axes_actor.GetYAxisCaptionActor2D().GetTextActor().SetTextScaleModeToNone()
     axes_actor.GetZAxisCaptionActor2D().GetTextActor().SetTextScaleModeToNone()
     axes_actor.GetXAxisCaptionActor2D().GetCaptionTextProperty().SetVerticalJustificationToBottom()
-    renderer.AddActor(axes_actor)
 
-    # Add text to the renderer
+    # Add title
     text_actor = vtk.vtkTextActor()
     text_actor.SetInput('Brain visualisation with neurons and connections')
     text_actor.GetTextProperty().SetFontSize(24)
     text_actor.GetTextProperty().SetColor(1, 1, 1)
-    text_actor.SetPosition(500, 900)
+    text_actor.GetTextProperty().BoldOn()
+    text_actor.SetDisplayPosition(10, 10)
+
+    # Create a renderer and add the actors
+    renderer = vtk.vtkRenderer()
+    renderer.AddActor(point_actor)
+    renderer.AddActor(connection_actor)
+    renderer.AddActor(axes_actor)
+    renderer.AddActor(text_actor)
+    renderer.ResetCamera()
+    renderer.SetBackground(0.32, 0.34, 0.43)
 
     # Create a render window and add the renderer
     render_window = vtk.vtkRenderWindow()
-    render_window.SetSize(1000, 1000)
     render_window.AddRenderer(renderer)
 
     # Create an interactor
