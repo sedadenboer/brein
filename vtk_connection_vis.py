@@ -305,18 +305,11 @@ def plot(positions: vtk.vtkPoints,
     renderer = vtk.vtkRenderer()
     renderer.AddActor(point_actor)
     renderer.AddActor(connection_actor)
-
-    # Create a scalar bar actor
-    if area_mapping:
-        scalar_bar = vtk.vtkScalarBarActor()
-        scalar_bar.SetLookupTable(get_lut())
-        scalar_bar.SetTitle('Areas')
-        renderer.AddActor(scalar_bar)
-
     renderer.ResetCamera()
 
     # Create a render window and add the renderer
     render_window = vtk.vtkRenderWindow()
+    render_window.SetSize(1000, 1000)
     render_window.AddRenderer(renderer)
 
     # Create an interactor
