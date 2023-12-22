@@ -41,8 +41,8 @@ Below the necessary data (filemaps) are shown:
         └───positions
             • rank_0_positions.txt
 ```
-### Visualisation videos 
-In the filemap `vis_vids` the visualisation videos of the final visualisation from ParaView are stored.
+### Visualisation videos and ParaView states
+In the filemap `vis_vids` the visualisation videos of the final visualisation from ParaView are stored. The ParaView settings of the visualisation (states) are also added in can be found in `ParaView_states`.
 
 ### Extra: vtk visualisation try-out
 The `vtk_connection_vis.py` file contains code to render a visualisation of the brain with its neurons and connections.
